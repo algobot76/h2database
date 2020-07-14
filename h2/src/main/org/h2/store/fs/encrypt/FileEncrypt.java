@@ -84,11 +84,11 @@ public class FileEncrypt extends FileBaseDefault {
             byte[] header = Arrays.copyOf(HEADER, BLOCK_SIZE);
             salt = MathUtils.secureRandomBytes(SALT_LENGTH);
             System.arraycopy(salt, 0, header, SALT_POS, salt.length);
-            writeFully(base, 0, ByteBuffer.wrap(header));
+            writeFully(0, ByteBuffer.wrap(header));
             size = 0;
         } else {
             salt = new byte[SALT_LENGTH];
-            readFully(base, SALT_POS, ByteBuffer.wrap(salt));
+            readFully(SALT_POS, ByteBuffer.wrap(salt));
             if ((size & BLOCK_SIZE_MASK) != 0) {
                 size -= BLOCK_SIZE;
             }
@@ -140,7 +140,7 @@ public class FileEncrypt extends FileBaseDefault {
     private void readInternal(ByteBuffer dst, long position, int len)
             throws IOException {
         int x = dst.position();
-        readFully(base, position + HEADER_LENGTH, dst);
+        readFully(position + HEADER_LENGTH, dst);
         long block = position / BLOCK_SIZE;
         while (len > 0) {
             xts.decrypt(block++, BLOCK_SIZE, dst.array(), dst.arrayOffset() + x);
@@ -149,10 +149,10 @@ public class FileEncrypt extends FileBaseDefault {
         }
     }
 
-    private static void readFully(FileChannel file, long pos, ByteBuffer dst)
+    private synchronized void readFully(long pos, ByteBuffer dst)
             throws IOException {
         do {
-            int len = file.read(dst, pos);
+            int len = base.read(dst, pos);
             if (len < 0) {
                 throw new EOFException();
             }
@@ -189,7 +189,7 @@ public class FileEncrypt extends FileBaseDefault {
             int plus = (int) (size & BLOCK_SIZE_MASK);
             if (plus > 0) {
                 temp = ByteBuffer.allocate(plus);
-                writeFully(base, p + HEADER_LENGTH + l, temp);
+                writeFully(p + HEADER_LENGTH + l, temp);
             }
             return len;
         }
@@ -211,14 +211,13 @@ public class FileEncrypt extends FileBaseDefault {
             x += BLOCK_SIZE;
             l -= BLOCK_SIZE;
         }
-        writeFully(base, position + HEADER_LENGTH, crypt);
+        writeFully(position + HEADER_LENGTH, crypt);
     }
 
-    private static void writeFully(FileChannel file, long pos,
-            ByteBuffer src) throws IOException {
+    private synchronized void writeFully(long pos, ByteBuffer src) throws IOException {
         int off = 0;
         do {
-            int len = file.write(src, pos + off);
+            int len = base.write(src, pos + off);
             off += len;
         } while (src.remaining() > 0);
     }
