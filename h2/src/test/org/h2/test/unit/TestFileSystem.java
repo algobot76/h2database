@@ -52,7 +52,11 @@ public class TestFileSystem extends TestBase {
     public static void main(String... a) throws Exception {
         TestBase test = TestBase.createCaller().init();
         // test.config.traceTest = true;
-        test.testFromMain();
+        FilePathEncrypt.register();
+        for (int i = 0; i < 100; i++) {
+            ((TestFileSystem)test).testConcurrent("encrypt:0007:" + test.getBaseDir() + "/fs");
+            test.println("Done pass #" + i);
+        }
     }
 
     @Override
@@ -783,7 +787,7 @@ public class TestFileSystem extends TestBase {
                         byteBuff.position(0);
                         int x = byteBuff.getInt();
                         int y = byteBuff.getInt();
-                        assertEquals(x, y);
+                        assertEquals(fsBase + " at " + pos, x, y);
                         Thread.yield();
                     }
                 }
@@ -809,7 +813,7 @@ public class TestFileSystem extends TestBase {
                 byteBuff.position(0);
                 int x = byteBuff.getInt();
                 int y = byteBuff.getInt();
-                assertEquals(x, y);
+                assertEquals(fsBase + " at " + pos, x, y);
                 assertEquals(data[pos], x);
             }
         } catch (Throwable e) {
